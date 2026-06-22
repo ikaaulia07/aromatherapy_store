@@ -1,0 +1,200 @@
+/* Admin Theme Variables inheriting from style.css */
+:root {
+    --sidebar-width: 250px;
+    --admin-bg: #FAF6F4;
+    --card-green: #E2F0D9;
+    --text-green: #385723;
+    --card-blue: #D9E1F2;
+    --text-blue: #1F4E79;
+}
+
+body.admin-body {
+    background-color: var(--admin-bg);
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Admin Sidebar Layout */
+.admin-sidebar {
+    width: var(--sidebar-width);
+    background-color: #fff;
+    border-right: 1px solid var(--border-color);
+    position: fixed;
+    height: 100vh;
+    left: 0;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-brand {
+    padding: 24px;
+    font-size: 1.3rem;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-menu {
+    list-style: none;
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex-grow: 1;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px 24px;
+    color: var(--text-color);
+    font-weight: 500;
+    font-size: 0.95rem;
+    border-left: 4px solid transparent;
+}
+
+.sidebar-link:hover, .sidebar-link.active {
+    background-color: var(--primary-light);
+    color: var(--primary-color);
+    border-left-color: var(--primary-color);
+}
+
+.sidebar-footer {
+    padding: 20px 24px;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Admin Main Content Wrapper */
+.admin-content {
+    margin-left: var(--sidebar-width);
+    padding: 40px;
+    width: calc(100% - var(--sidebar-width));
+}
+
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.admin-header h1 {
+    font-size: 2.2rem;
+    color: var(--text-color);
+}
+
+/* Metric Stats Cards */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 24px;
+    margin-bottom: 40px;
+}
+
+.stat-card {
+    background-color: #fff;
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: var(--card-shadow);
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    background-color: var(--primary-light);
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+}
+
+.stat-icon.green {
+    background-color: var(--card-green);
+    color: var(--text-green);
+}
+
+.stat-icon.blue {
+    background-color: var(--card-blue);
+    color: var(--text-blue);
+}
+
+.stat-info h3 {
+    font-size: 1.8rem;
+    color: var(--text-color);
+    font-family: var(--font-body);
+}
+
+.stat-info p {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Order Status Badges */
+.badge {
+    display: inline-block;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 20px;
+}
+
+.badge-pending { background-color: #FFF3CD; color: #856404; }
+.badge-process { background-color: #CCE5FF; color: #004085; }
+.badge-shipped { background-color: #D4EDDA; color: #155724; }
+.badge-completed { background-color: #D4EDDA; color: #155724; border: 1px solid #c3e6cb; }
+.badge-cancelled { background-color: #F8D7DA; color: #721C24; }
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .admin-sidebar {
+        width: 70px;
+    }
+    
+    .sidebar-brand span, .sidebar-link span, .sidebar-footer span {
+        display: none;
+    }
+    
+    .admin-content {
+        margin-left: 70px;
+        width: calc(100% - 70px);
+        padding: 20px;
+    }
+    
+    .sidebar-link {
+        justify-content: center;
+        padding: 15px 0;
+    }
+}
+
+/* Click Ripple Effect for Admin Dashboard */
+.click-ripple {
+    position: fixed;
+    border: 2px solid var(--primary-color);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    animation: ripple-out 0.6s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+    pointer-events: none;
+    z-index: 9999;
+    width: 30px;
+    height: 30px;
+    opacity: 0.8;
+}
+
+@keyframes ripple-out {
+    to {
+        transform: translate(-50%, -50%) scale(2.5);
+        opacity: 0;
+        border-color: var(--accent-color);
+    }
+}
