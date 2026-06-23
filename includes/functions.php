@@ -109,4 +109,60 @@ function logError($exception) {
     $message = "[" . date('Y-m-d H:i:s') . "] ERROR: " . $exception->getMessage() . " in " . $exception->getFile() . ":" . $exception->getLine() . "\n";
     @error_log($message, 3, $logPath);
 }
+
+// Get Midtrans Snap Token
+function getMidtransSnapToken($orderId, $grossAmount, $customerDetails) {
+    $configPath = __DIR__ . '/../config/midtrans.php';
+    if (file_exists($configPath)) {
+        require_once $configPath;
+    } else {
+        return null;
+    }
+
+    $payload = [
+        'transaction_details' => [
+            'order_id'     => $orderId,
+            'gross_amount' => (int)$grossAmount,
+        ],
+        'customer_details' => [
+            'first_name' => $customerDetails['nama_lengkap'] ?? '',
+            'email'      => $customerDetails['email'] ?? '',
+            'phone'      => $customerDetails['telepon'] ?? '',
+        ]
+    ];
+
+    $options = [
+        'http' => [
+            'header'  => "Content-Type: application/json\r\n" .
+                         "Accept: application/json\r\n" .
+                         "Authorization: Basic " . base64_encode(MIDTRANS_SERVER_KEY . ':') . "\r\n",
+            'method'  => 'POST',
+            'content' => json_encode($payload),
+            'ignore_errors' => true
+        ]
+    ];
+
+    try {
+        $context  = stream_context_create($options);
+        $response = @file_get_contents(MIDTRANS_SNAP_API_URL, false, $context);
+        
+        if ($response === false) {
+            return null;
+        }
+
+        $resDecoded = json_decode($response, true);
+        if (isset($resDecoded['token'])) {
+            return $resDecoded['token'];
+        } else {
+            // Log Midtrans API Error
+            if (isset($resDecoded['error_messages'])) {
+                error_log("Midtrans API Error for order $orderId: " . implode(', ', $resDecoded['error_messages']));
+            }
+            return null;
+        }
+    } catch (Exception $e) {
+        logError($e);
+        return null;
+    }
+}
 ?>

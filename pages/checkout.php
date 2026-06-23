@@ -31,60 +31,19 @@ if ($pdo) {
             $stmt->execute([$id_user]);
             $pendingOrder = $stmt->fetch();
         }
+
+        // If pending order exists but snap_token is empty, try to generate it dynamically
+        if ($pendingOrder && empty($pendingOrder['snap_token'])) {
+            $snap_token = getMidtransSnapToken($pendingOrder['id_pesanan'], $pendingOrder['total_harga'], $user_info);
+            if ($snap_token) {
+                $stmt = $pdo->prepare("UPDATE pesanan SET snap_token = ? WHERE id_pesanan = ?");
+                $stmt->execute([$snap_token, $pendingOrder['id_pesanan']]);
+                $pendingOrder['snap_token'] = $snap_token;
+            }
+        }
     } catch (\PDOException $e) {
         logError($e);
     }
-}
-
-// Action 1: Upload Payment Proof
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'pembayaran') {
-    $id_pesanan = (int)$_POST['id_pesanan'];
-    $metode = sanitize($_POST['metode_pembayaran']);
-    
-    // File Upload handling
-    $bukti_nama = '';
-    if (isset($_FILES['bukti_pembayaran']) && $_FILES['bukti_pembayaran']['error'] === UPLOAD_ERR_OK) {
-        $fileTmpPath = $_FILES['bukti_pembayaran']['tmp_name'];
-        $fileName = $_FILES['bukti_pembayaran']['name'];
-        $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-        
-        $allowedExtensions = ['jpg', 'jpeg', 'png'];
-        if (in_array($fileExtension, $allowedExtensions)) {
-            $newFileName = 'PAY_' . $id_pesanan . '_' . time() . '.' . $fileExtension;
-            $uploadFileDir = __DIR__ . '/../uploads/pembayaran/';
-            
-            // Create folder if it doesn't exist
-            if (!file_exists($uploadFileDir)) {
-                mkdir($uploadFileDir, 0777, true);
-            }
-            
-            $dest_path = $uploadFileDir . $newFileName;
-            if (move_uploaded_file($fileTmpPath, $dest_path)) {
-                $bukti_nama = $newFileName;
-            }
-        }
-    }
-
-    if (!empty($bukti_nama)) {
-        try {
-            // Save payment
-            $stmt = $pdo->prepare("INSERT INTO pembayaran (id_pesanan, metode_pembayaran, bukti_pembayaran, tanggal_bayar, status_verifikasi) VALUES (?, ?, ?, NOW(), 'Menunggu')");
-            $stmt->execute([$id_pesanan, $metode, $bukti_nama]);
-            
-            // Update order status to 'Diproses'
-            $stmt = $pdo->prepare("UPDATE pesanan SET status = 'Diproses' WHERE id_pesanan = ?");
-            $stmt->execute([$id_pesanan]);
-            
-            setFlashMessage('success', 'Bukti pembayaran berhasil diunggah! Admin kami akan memverifikasi pesanan Anda.');
-            redirect('pesanan-berhasil.php?id_pesanan=' . $id_pesanan);
-        } catch (\PDOException $e) {
-            logError($e);
-            setFlashMessage('danger', 'Gagal memproses unggah bukti pembayaran.');
-        }
-    } else {
-        setFlashMessage('danger', 'Unggah bukti pembayaran berupa file gambar JPG/PNG yang valid.');
-    }
-    redirect('checkout.php');
 }
 
 // Action 2: Process Place Order
@@ -125,19 +84,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             if ($alamat_kirim !== $user_info['alamat']) {
                 $stmt = $pdo->prepare("UPDATE users SET alamat = ? WHERE id_user = ?");
                 $stmt->execute([$alamat_kirim, $id_user]);
+                $user_info['alamat'] = $alamat_kirim; // update local context
             }
             
-            // 5. Clear cart
+            // 5. Generate Snap Token and update pesanan
+            $snap_token = getMidtransSnapToken($id_pesanan, $totalHarga, $user_info);
+            if ($snap_token) {
+                $stmtToken = $pdo->prepare("UPDATE pesanan SET snap_token = ? WHERE id_pesanan = ?");
+                $stmtToken->execute([$snap_token, $id_pesanan]);
+            }
+            
+            // 6. Clear cart
             $stmtClear = $pdo->prepare("DELETE FROM keranjang WHERE id_user = ?");
             $stmtClear->execute([$id_user]);
             
             $pdo->commit();
             setFlashMessage('success', 'Pesanan berhasil dibuat. Silakan lakukan pembayaran.');
-            redirect('checkout.php');
+            redirect('checkout.php?id_pesanan=' . $id_pesanan);
             
         } catch (\PDOException $e) {
             logError($e);
-            $pdo->rollBack();
+            if ($pdo && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             setFlashMessage('danger', 'Terjadi kesalahan saat memproses pesanan.');
             redirect('keranjang.php');
         }
@@ -169,105 +138,67 @@ if (!$pendingOrder && $pdo) {
     <?= getFlashMessage(); ?>
     
     <?php if ($pendingOrder): ?>
-        <!-- PAYMENT PROOF UPLOAD SCREEN -->
-        <div class="auth-wrapper" style="max-width: 650px; padding: 40px; border-radius: 24px;">
+        <!-- MIDTRANS PAYMENT SCREEN -->
+        <div class="auth-wrapper" style="max-width: 650px; padding: 40px; border-radius: 24px; text-align: center;">
             <div class="auth-header">
-                <h2>Konfirmasi Pembayaran</h2>
-                <p class="subtitle">Pesanan Anda Telah Diterima</p>
-                <div style="font-size: 1.1rem; margin-top: 15px; background-color: var(--primary-light); color: var(--primary-hover); padding: 12px; border-radius: 12px; font-weight:700;">
-                    Total Transfer: <?= formatRupiah($pendingOrder['total_harga']) ?>
+                <i class="fa fa-credit-card" style="font-size: 3.5rem; color: var(--primary-color); margin-bottom: 20px;"></i>
+                <h2>Pembayaran Pesanan</h2>
+                <p class="subtitle">Pesanan Anda #<?= $pendingOrder['id_pesanan'] ?> Telah Dibuat</p>
+                <div style="font-size: 1.3rem; margin-top: 20px; background-color: var(--primary-light); color: var(--primary-hover); padding: 15px; border-radius: 12px; font-weight:700;">
+                    Total Bayar: <?= formatRupiah($pendingOrder['total_harga']) ?>
                 </div>
             </div>
+
+            <?php if (!empty($pendingOrder['snap_token'])): ?>
+                <p style="color: var(--text-muted); margin: 20px 0; font-size: 0.95rem;">
+                    Silakan klik tombol di bawah ini untuk menyelesaikan pembayaran menggunakan Kartu Kredit, Virtual Account, QRIS, e-Wallet, atau metode lainnya melalui Midtrans.
+                </p>
+                <button id="pay-button" class="btn btn-primary" style="width: 100%; height: 50px; display:flex; align-items:center; justify-content:center; gap: 10px; font-size: 1.05rem; font-weight: 600;">
+                    <i class="fa fa-shield-halved"></i> Bayar Sekarang
+                </button>
+            <?php else: ?>
+                <div class="alert alert-danger" style="margin-top: 20px;">
+                    Gagal memuat sistem pembayaran Midtrans. Silakan coba muat ulang halaman ini atau hubungi bantuan.
+                </div>
+            <?php endif; ?>
             
-            <form action="checkout.php" method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="action" value="pembayaran">
-                <input type="hidden" name="id_pesanan" value="<?= $pendingOrder['id_pesanan'] ?>">
-                
-                <div class="form-group">
-                    <label for="metode_pembayaran" class="form-label">Metode Pembayaran</label>
-                    <select name="metode_pembayaran" id="metode_pembayaran" class="form-control" required>
-                        <option value="QRIS">QRIS (GoPay/DANA/OVO/ShopeePay/LinkAja)</option>
-                        <option value="DANA">DANA (082341468870 a.n. Ikha A.A.)</option>
-                        <option value="GoPay">GoPay (082341468870 a.n. Ikha A.A.)</option>
-                        <option value="BCA Transfer">Transfer Bank BCA (872-045-8120 a.n. Ikha A.A.)</option>
-                    </select>
-                </div>
+            <div style="margin-top: 25px; font-size: 0.85rem; color: var(--text-muted);">
+                <i class="fa fa-lock"></i> Pembayaran Anda dienkripsi secara aman dan diproses otomatis.
+            </div>
+        </div>
 
-                <div id="payment-details-container" style="margin: 25px 0; background-color: #FCF8F2; border: 1px solid var(--border-color); padding: 25px; border-radius: 16px;">
-                    <!-- QRIS Detail -->
-                    <div id="detail-QRIS" class="payment-detail-item" style="text-align: center;">
-                        <h4 style="font-family: var(--font-body); font-weight:600; margin-bottom: 10px; color: var(--text-color);"><i class="fa fa-qrcode" style="color: var(--primary-color);"></i> QRIS Aromatherapy Store</h4>
-                        <p style="font-size: 0.9rem; margin-bottom: 15px; color: var(--text-muted);">Pindai kode QR di bawah ini menggunakan aplikasi e-wallet (GoPay, DANA, OVO, ShopeePay) atau M-Banking Anda:</p>
-                        <img src="<?= getAppUrl() ?>/assets/images/qris_payment.png" alt="QRIS QR Code" style="max-width: 220px; width: 100%; margin: 0 auto 12px; border: 4px solid #fff; box-shadow: 0 4px 15px rgba(0,0,0,0.06); border-radius: 12px; display: block;">
-                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 5px;">Nama Merchant: <strong>Aromatherapy Store (Ikha A.A.)</strong></p>
-                    </div>
-
-                    <!-- DANA Detail -->
-                    <div id="detail-DANA" class="payment-detail-item" style="display: none;">
-                        <h4 style="font-family: var(--font-body); font-weight:600; margin-bottom: 10px; color: var(--text-color);"><i class="fa fa-wallet" style="color: var(--primary-color);"></i> Akun DANA Store</h4>
-                        <p style="font-size: 0.9rem; margin-bottom: 10px; color: var(--text-muted);">Silakan transfer ke akun DANA resmi kami:</p>
-                        <ul style="list-style: none; padding-left: 0; font-size: 0.95rem; line-height: 1.8;">
-                            <li>Nomor DANA: <strong>082341468870</strong></li>
-                            <li>Atas Nama: <strong>Ikha A.A.</strong></li>
-                        </ul>
-                    </div>
-
-                    <!-- GoPay Detail -->
-                    <div id="detail-GoPay" class="payment-detail-item" style="display: none;">
-                        <h4 style="font-family: var(--font-body); font-weight:600; margin-bottom: 10px; color: var(--text-color);"><i class="fa fa-wallet" style="color: var(--primary-color);"></i> Akun GoPay Store</h4>
-                        <p style="font-size: 0.9rem; margin-bottom: 10px; color: var(--text-muted);">Silakan transfer ke akun GoPay resmi kami:</p>
-                        <ul style="list-style: none; padding-left: 0; font-size: 0.95rem; line-height: 1.8;">
-                            <li>Nomor GoPay: <strong>082341468870</strong></li>
-                            <li>Atas Nama: <strong>Ikha A.A.</strong></li>
-                        </ul>
-                    </div>
-
-                    <!-- BCA Detail -->
-                    <div id="detail-BCA" class="payment-detail-item" style="display: none;">
-                        <h4 style="font-family: var(--font-body); font-weight:600; margin-bottom: 10px; color: var(--text-color);"><i class="fa fa-university" style="color: var(--primary-color);"></i> Rekening Bank BCA</h4>
-                        <p style="font-size: 0.9rem; margin-bottom: 10px; color: var(--text-muted);">Silakan transfer ke rekening Bank BCA resmi kami:</p>
-                        <ul style="list-style: none; padding-left: 0; font-size: 0.95rem; line-height: 1.8;">
-                            <li>Bank: <strong>BCA (Bank Central Asia)</strong></li>
-                            <li>Nomor Rekening: <strong>872-045-8120</strong></li>
-                            <li>Atas Nama: <strong>Ikha A.A.</strong></li>
-                        </ul>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="bukti_pembayaran" class="form-label">Unggah Bukti Transfer (Format JPG/PNG)</label>
-                    <input type="file" name="bukti_pembayaran" id="bukti_pembayaran" class="form-control" accept="image/*" required style="padding: 8px 12px;">
-                </div>
-                
-                <button type="submit" class="btn btn-primary" style="width: 100%; height: 48px; margin-top: 10px;">Kirim Bukti Pembayaran</button>
-            </form>
-
-            <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                const selectEl = document.getElementById('metode_pembayaran');
-                if (selectEl) {
-                    selectEl.addEventListener('change', function() {
-                        const selectedVal = this.value;
-                        const detailItems = document.querySelectorAll('.payment-detail-item');
-                        
-                        detailItems.forEach(item => {
-                            item.style.display = 'none';
-                        });
-                        
-                        if (selectedVal === 'QRIS') {
-                            document.getElementById('detail-QRIS').style.display = 'block';
-                        } else if (selectedVal === 'DANA') {
-                            document.getElementById('detail-DANA').style.display = 'block';
-                        } else if (selectedVal === 'GoPay') {
-                            document.getElementById('detail-GoPay').style.display = 'block';
-                        } else if (selectedVal === 'BCA Transfer') {
-                            document.getElementById('detail-BCA').style.display = 'block';
+        <?php if (!empty($pendingOrder['snap_token'])): ?>
+            <?php
+            // Load configuration to get Client Key
+            $midtransConfigPath = __DIR__ . '/../config/midtrans.php';
+            if (file_exists($midtransConfigPath)) {
+                require_once $midtransConfigPath;
+            }
+            $isProd = defined('MIDTRANS_IS_PRODUCTION') ? MIDTRANS_IS_PRODUCTION : false;
+            $snapJsUrl = $isProd ? 'https://app.midtrans.com/snap/snap.js' : 'https://app.sandbox.midtrans.com/snap/snap.js';
+            $clientKey = defined('MIDTRANS_CLIENT_KEY') ? MIDTRANS_CLIENT_KEY : '';
+            ?>
+            <script type="text/javascript" src="<?= $snapJsUrl ?>" data-client-key="<?= $clientKey ?>"></script>
+            <script type="text/javascript">
+                const payButton = document.getElementById('pay-button');
+                payButton.addEventListener('click', function () {
+                    snap.pay('<?= $pendingOrder['snap_token'] ?>', {
+                        onSuccess: function(result) {
+                            window.location.href = 'pesanan-berhasil.php?id_pesanan=<?= $pendingOrder['id_pesanan'] ?>';
+                        },
+                        onPending: function(result) {
+                            window.location.href = 'pesanan.php';
+                        },
+                        onError: function(result) {
+                            alert("Pembayaran gagal! Silakan coba lagi.");
+                        },
+                        onClose: function() {
+                            // User closed the popup without finishing the payment
                         }
                     });
-                }
-            });
+                });
             </script>
-        </div>
+        <?php endif; ?>
         
     <?php else: ?>
         <!-- PLACE ORDER SCREEN -->
