@@ -199,9 +199,12 @@ if ($pdo) {
                             </div>
                             <?php if ($payment): ?>
                                 <small style="display: block; margin-top: 5px; color: var(--text-muted);">
-                                    Status Verifikasi Transfer: 
+                                    Metode Pembayaran: <strong><?= htmlspecialchars($payment['metode_pembayaran']) ?></strong>
+                                </small>
+                                <small style="display: block; color: var(--text-muted);">
+                                    Status Pembayaran: 
                                     <strong style="color: <?= $payment['status_verifikasi'] === 'Diterima' ? 'var(--text-green, #2e7d32)' : ($payment['status_verifikasi'] === 'Ditolak' ? '#d32f2f' : '#f57f17') ?>;">
-                                        <?= $payment['status_verifikasi'] ?>
+                                        <?= $payment['status_verifikasi'] === 'Diterima' ? 'Lunas' : ($payment['status_verifikasi'] === 'Ditolak' ? 'Gagal / Batal' : 'Menunggu') ?>
                                     </strong>
                                 </small>
                             <?php endif; ?>
@@ -209,7 +212,7 @@ if ($pdo) {
                         <div>
                             <?php if ($order['status'] === 'Pending'): ?>
                                 <a href="checkout.php?id_pesanan=<?= $order['id_pesanan'] ?>" class="btn btn-primary" style="padding: 8px 20px; font-size: 0.85rem;">
-                                    <i class="fa fa-upload"></i> Unggah Bukti Bayar
+                                    <i class="fa fa-credit-card"></i> Bayar Sekarang
                                 </a>
                             <?php elseif ($order['status'] === 'Dikirim'): ?>
                                 <form action="pesanan.php" method="POST" onsubmit="return confirm('Apakah Anda yakin barang sudah diterima dengan baik?');">

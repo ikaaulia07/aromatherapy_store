@@ -194,39 +194,24 @@ if ($pdo) {
                 <div style="background-color: #fff; padding: 30px; border-radius: 20px; border: 1px solid var(--border-color); box-shadow: var(--card-shadow);">
                     
                     <!-- 1. Verify Payment Card -->
-                    <h3 style="font-family: var(--font-heading); color: var(--text-color); font-size: 1.4rem; margin-bottom: 20px;">Verifikasi Pembayaran</h3>
+                    <h3 style="font-family: var(--font-heading); color: var(--text-color); font-size: 1.4rem; margin-bottom: 20px;">Informasi Pembayaran (Midtrans)</h3>
                     
                     <?php if ($paymentInfo): ?>
                         <div style="background-color: #FCF8F2; padding: 20px; border-radius: 12px; border:1px solid var(--border-color); font-size: 0.9rem; margin-bottom: 20px;">
                             <p style="margin-bottom:8px;"><strong>Metode:</strong> <?= htmlspecialchars($paymentInfo['metode_pembayaran']) ?></p>
-                            <p style="margin-bottom:8px;"><strong>Tanggal Kirim:</strong> <?= date('d M Y H:i', strtotime($paymentInfo['tanggal_bayar'])) ?></p>
-                            <p style="margin-bottom:8px;"><strong>Status Verifikasi:</strong> 
+                            <p style="margin-bottom:8px;"><strong>Transaction ID:</strong> <code style="background-color:#eee; padding:2px 4px; border-radius:4px; font-size:0.85rem;"><?= htmlspecialchars($paymentInfo['bukti_pembayaran']) ?></code></p>
+                            <p style="margin-bottom:8px;"><strong>Waktu Bayar:</strong> <?= date('d M Y H:i', strtotime($paymentInfo['tanggal_bayar'])) ?></p>
+                            <p style="margin-bottom:8px;"><strong>Status Transaksi:</strong> 
                                 <span style="font-weight:700; color: <?= $paymentInfo['status_verifikasi'] === 'Diterima' ? 'var(--text-green)' : ($paymentInfo['status_verifikasi'] === 'Ditolak' ? '#721c24' : '#856404') ?>;">
-                                    <?= $paymentInfo['status_verifikasi'] ?>
+                                    <?= $paymentInfo['status_verifikasi'] === 'Diterima' ? 'LUNAS / BERHASIL' : ($paymentInfo['status_verifikasi'] === 'Ditolak' ? 'GAGAL / KEDALUWARSA' : 'PENDING / MENUNGGU') ?>
                                 </span>
                             </p>
-                            
-                            <?php if ($paymentInfo['status_verifikasi'] === 'Menunggu'): ?>
-                                <form action="index.php?id=<?= $id_pesanan ?>" method="POST" style="display:flex; gap:10px; margin-top:15px;">
-                                    <input type="hidden" name="action" value="verify_payment">
-                                    <input type="hidden" name="id_pesanan" value="<?= $id_pesanan ?>">
-                                    <input type="hidden" name="id_pembayaran" value="<?= $paymentInfo['id_pembayaran'] ?>">
-                                    
-                                    <button type="submit" name="status_verifikasi" value="Diterima" class="btn btn-primary" style="flex:1; padding: 8px 12px; font-size: 0.85rem; height:36px; display:flex; align-items:center; justify-content:center;">Terima</button>
-                                    <button type="submit" name="status_verifikasi" value="Ditolak" class="btn btn-outline" style="flex:1; padding: 8px 12px; font-size: 0.85rem; height:36px; display:flex; align-items:center; justify-content:center;">Tolak</button>
-                                </form>
-                            <?php endif; ?>
                         </div>
-                        
-                        <h4 style="font-family:var(--font-body); font-weight:600; margin-bottom:12px; font-size: 0.95rem;">Foto Bukti Transfer:</h4>
-                        <div style="border-radius:12px; overflow:hidden; border:1px solid var(--border-color); background-color: var(--secondary-color);">
-                            <a href="<?= getAppUrl() ?>/uploads/pembayaran/<?= $paymentInfo['bukti_pembayaran'] ?>" target="_blank">
-                                <img src="<?= getAppUrl() ?>/uploads/pembayaran/<?= $paymentInfo['bukti_pembayaran'] ?>" alt="Bukti Transfer" style="width:100%; border-radius:0; display:block;">
-                            </a>
+                        <div style="background-color: #E8F5E9; border-left: 4px solid #2E7D32; padding: 15px; border-radius: 6px; font-size: 0.85rem; color: #2E7D32;">
+                            <i class="fa fa-circle-check"></i> Pembayaran ini diproses secara otomatis oleh sistem melalui Payment Gateway Midtrans.
                         </div>
-                        <small style="color:var(--text-muted); display:block; margin-top:5px; text-align:center;">Klik gambar untuk memperbesar</small>
                     <?php else: ?>
-                        <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 25px;">Pelanggan belum mengunggah bukti pembayaran.</p>
+                        <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 25px;">Pelanggan belum menyelesaikan proses pembayaran di Midtrans.</p>
                     <?php endif; ?>
 
                     <hr style="border:0; border-top:1px solid var(--border-color); margin: 25px 0;">
