@@ -47,17 +47,17 @@ if ($pdo) {
             if ($verif_status === 'Diterima') {
                 $stmt = $pdo->prepare("UPDATE pesanan SET status = 'Diproses' WHERE id_pesanan = ?");
                 $stmt->execute([$id]);
-                setFlashMessage('success', 'Bukti pembayaran disetujui! Status pesanan berubah menjadi Diproses.');
+                setFlashMessage('success', '✅ Pembayaran dikonfirmasi! Pesanan #' . $id . ' berubah menjadi Diproses.');
             } else {
                 $stmt = $pdo->prepare("UPDATE pesanan SET status = 'Pending' WHERE id_pesanan = ?");
                 $stmt->execute([$id]);
-                setFlashMessage('warning', 'Bukti pembayaran ditolak! Status pesanan dikembalikan ke Pending.');
+                setFlashMessage('warning', 'Pembayaran ditolak. Pesanan #' . $id . ' dikembalikan ke Pending.');
             }
             
             $pdo->commit();
         } catch (\PDOException $e) {
             $pdo->rollBack();
-            setFlashMessage('danger', 'Gagal memverifikasi bukti pembayaran.');
+            setFlashMessage('danger', 'Gagal memverifikasi pembayaran.');
         }
         redirect('index.php?id=' . $id);
     }
@@ -193,25 +193,41 @@ if ($pdo) {
                 <!-- Action Verification controls & Payment Proof -->
                 <div style="background-color: #fff; padding: 30px; border-radius: 20px; border: 1px solid var(--border-color); box-shadow: var(--card-shadow);">
                     
-                    <!-- 1. Verify Payment Card -->
-                    <h3 style="font-family: var(--font-heading); color: var(--text-color); font-size: 1.4rem; margin-bottom: 20px;">Informasi Pembayaran (Midtrans)</h3>
+                    <!-- 1. Payment Info Card -->
+                    <h3 style="font-family: var(--font-heading); color: var(--text-color); font-size: 1.4rem; margin-bottom: 20px;">Informasi Pembayaran</h3>
                     
                     <?php if ($paymentInfo): ?>
                         <div style="background-color: #FCF8F2; padding: 20px; border-radius: 12px; border:1px solid var(--border-color); font-size: 0.9rem; margin-bottom: 20px;">
                             <p style="margin-bottom:8px;"><strong>Metode:</strong> <?= htmlspecialchars($paymentInfo['metode_pembayaran']) ?></p>
-                            <p style="margin-bottom:8px;"><strong>Transaction ID:</strong> <code style="background-color:#eee; padding:2px 4px; border-radius:4px; font-size:0.85rem;"><?= htmlspecialchars($paymentInfo['bukti_pembayaran']) ?></code></p>
-                            <p style="margin-bottom:8px;"><strong>Waktu Bayar:</strong> <?= date('d M Y H:i', strtotime($paymentInfo['tanggal_bayar'])) ?></p>
-                            <p style="margin-bottom:8px;"><strong>Status Transaksi:</strong> 
+                            <p style="margin-bottom:8px;"><strong>Tanggal Konfirmasi:</strong> <?= date('d M Y H:i', strtotime($paymentInfo['tanggal_bayar'])) ?></p>
+                            <p style="margin-bottom:8px;"><strong>Status Pembayaran:</strong> 
                                 <span style="font-weight:700; color: <?= $paymentInfo['status_verifikasi'] === 'Diterima' ? 'var(--text-green)' : ($paymentInfo['status_verifikasi'] === 'Ditolak' ? '#721c24' : '#856404') ?>;">
-                                    <?= $paymentInfo['status_verifikasi'] === 'Diterima' ? 'LUNAS / BERHASIL' : ($paymentInfo['status_verifikasi'] === 'Ditolak' ? 'GAGAL / KEDALUWARSA' : 'PENDING / MENUNGGU') ?>
+                                    <?= $paymentInfo['status_verifikasi'] === 'Diterima' ? '✅ LUNAS' : ($paymentInfo['status_verifikasi'] === 'Ditolak' ? '❌ DITOLAK' : '⏳ MENUNGGU KONFIRMASI ADMIN') ?>
                                 </span>
                             </p>
                         </div>
-                        <div style="background-color: #E8F5E9; border-left: 4px solid #2E7D32; padding: 15px; border-radius: 6px; font-size: 0.85rem; color: #2E7D32;">
-                            <i class="fa fa-circle-check"></i> Pembayaran ini diproses secara otomatis oleh sistem melalui Payment Gateway Midtrans.
-                        </div>
+                        
+                        <?php if ($paymentInfo['status_verifikasi'] === 'Menunggu'): ?>
+                            <div style="background-color: #FFF8E1; border-left:4px solid #F9A825; padding:15px; border-radius:8px; margin-bottom:20px; font-size:0.875rem; color:#5a4000;">
+                                ⏳ Pelanggan telah mengklik "Saya Sudah Transfer". Verifikasi dan konfirmasi pembayaran ini.
+                            </div>
+                            <form action="index.php?id=<?= $id_pesanan ?>" method="POST" style="display:flex; gap:10px;">
+                                <input type="hidden" name="action" value="verify_payment">
+                                <input type="hidden" name="id_pesanan" value="<?= $id_pesanan ?>">
+                                <input type="hidden" name="id_pembayaran" value="<?= $paymentInfo['id_pembayaran'] ?>">
+                                <button type="submit" name="status_verifikasi" value="Diterima" class="btn btn-primary" style="flex:1; height:44px; font-size:0.9rem;" onclick="return confirm('Konfirmasi pembayaran ini sebagai LUNAS?')"><i class="fa fa-circle-check"></i> Konfirmasi Pembayaran</button>
+                                <button type="submit" name="status_verifikasi" value="Ditolak" class="btn btn-outline" style="flex:1; height:44px; font-size:0.9rem;" onclick="return confirm('Tolak pembayaran ini?')"><i class="fa fa-circle-xmark"></i> Tolak</button>
+                            </form>
+                        <?php else: ?>
+                            <div style="background-color: #E8F5E9; border-left: 4px solid #2E7D32; padding: 15px; border-radius: 6px; font-size: 0.85rem; color: #2E7D32;">
+                                <i class="fa fa-circle-check"></i> Pembayaran sudah diverifikasi.
+                            </div>
+                        <?php endif; ?>
                     <?php else: ?>
-                        <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 25px;">Pelanggan belum menyelesaikan proses pembayaran di Midtrans.</p>
+                        <div style="background-color: #f5f5f5; padding: 20px; border-radius: 10px; text-align:center; color:var(--text-muted);">
+                            <i class="fa fa-clock" style="font-size:1.8rem; display:block; margin-bottom:8px;"></i>
+                            <p style="margin:0; font-size:0.95rem;">Pelanggan belum mengkonfirmasi transfer.</p>
+                        </div>
                     <?php endif; ?>
 
                     <hr style="border:0; border-top:1px solid var(--border-color); margin: 25px 0;">

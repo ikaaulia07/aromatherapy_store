@@ -199,21 +199,25 @@ if ($pdo) {
                             </div>
                             <?php if ($payment): ?>
                                 <small style="display: block; margin-top: 5px; color: var(--text-muted);">
-                                    Metode Pembayaran: <strong><?= htmlspecialchars($payment['metode_pembayaran']) ?></strong>
+                                    Metode: <strong><?= htmlspecialchars($payment['metode_pembayaran']) ?></strong>
                                 </small>
                                 <small style="display: block; color: var(--text-muted);">
-                                    Status Pembayaran: 
+                                    Status: 
                                     <strong style="color: <?= $payment['status_verifikasi'] === 'Diterima' ? 'var(--text-green, #2e7d32)' : ($payment['status_verifikasi'] === 'Ditolak' ? '#d32f2f' : '#f57f17') ?>;">
-                                        <?= $payment['status_verifikasi'] === 'Diterima' ? 'Lunas' : ($payment['status_verifikasi'] === 'Ditolak' ? 'Gagal / Batal' : 'Menunggu') ?>
+                                        <?= $payment['status_verifikasi'] === 'Diterima' ? '✅ Lunas' : ($payment['status_verifikasi'] === 'Ditolak' ? '❌ Ditolak' : '⏳ Menunggu Verifikasi Admin') ?>
                                     </strong>
                                 </small>
                             <?php endif; ?>
                         </div>
                         <div>
-                            <?php if ($order['status'] === 'Pending'): ?>
+                            <?php if ($order['status'] === 'Pending' && !$payment): ?>
                                 <a href="checkout.php?id_pesanan=<?= $order['id_pesanan'] ?>" class="btn btn-primary" style="padding: 8px 20px; font-size: 0.85rem;">
-                                    <i class="fa fa-credit-card"></i> Bayar Sekarang
+                                    <i class="fa fa-building-columns"></i> Bayar &amp; Konfirmasi Transfer
                                 </a>
+                            <?php elseif ($order['status'] === 'Pending' && $payment && $payment['status_verifikasi'] === 'Menunggu'): ?>
+                                <span style="font-size: 0.82rem; color: #f57f17; font-weight:600;">
+                                    <i class="fa fa-clock"></i> Menunggu Verifikasi Admin
+                                </span>
                             <?php elseif ($order['status'] === 'Dikirim'): ?>
                                 <form action="pesanan.php" method="POST" onsubmit="return confirm('Apakah Anda yakin barang sudah diterima dengan baik?');">
                                     <input type="hidden" name="action" value="konfirmasi_selesai">
@@ -228,7 +232,7 @@ if ($pdo) {
                                 </span>
                             <?php elseif ($order['status'] === 'Selesai'): ?>
                                 <span style="font-size: 0.85rem; color: #2e7d32; font-weight: 600;">
-                                    <i class="fa fa-check-circle"></i> Selesai & Diterima
+                                    <i class="fa fa-check-circle"></i> Selesai &amp; Diterima
                                 </span>
                             <?php elseif ($order['status'] === 'Dibatalkan'): ?>
                                 <span style="font-size: 0.85rem; color: #d32f2f; font-weight: 600;">
@@ -237,7 +241,13 @@ if ($pdo) {
                             <?php endif; ?>
                         </div>
                     </div>
-                </div>
+                    <!-- Lacak Pesanan Button -->
+                    <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); display:flex; justify-content: flex-end;">
+                        <a href="lacak-pesanan.php?id=<?= $order['id_pesanan'] ?>" class="btn btn-outline" style="padding: 7px 18px; font-size: 0.83rem; display:flex; align-items:center; gap:6px;">
+                            <i class="fa fa-route"></i> Lacak Pesanan
+                        </a>
+                    </div>
+            </div>
             <?php endforeach; ?>
         </div>
     <?php else: ?>

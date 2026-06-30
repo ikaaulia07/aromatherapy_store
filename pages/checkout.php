@@ -31,16 +31,6 @@ if ($pdo) {
             $stmt->execute([$id_user]);
             $pendingOrder = $stmt->fetch();
         }
-
-        // If pending order exists but snap_token is empty, try to generate it dynamically
-        if ($pendingOrder && empty($pendingOrder['snap_token'])) {
-            $snap_token = getMidtransSnapToken($pendingOrder['id_pesanan'], $pendingOrder['total_harga'], $user_info);
-            if ($snap_token) {
-                $stmt = $pdo->prepare("UPDATE pesanan SET snap_token = ? WHERE id_pesanan = ?");
-                $stmt->execute([$snap_token, $pendingOrder['id_pesanan']]);
-                $pendingOrder['snap_token'] = $snap_token;
-            }
-        }
     } catch (\PDOException $e) {
         logError($e);
     }
@@ -87,19 +77,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $user_info['alamat'] = $alamat_kirim; // update local context
             }
             
-            // 5. Generate Snap Token and update pesanan
-            $snap_token = getMidtransSnapToken($id_pesanan, $totalHarga, $user_info);
-            if ($snap_token) {
-                $stmtToken = $pdo->prepare("UPDATE pesanan SET snap_token = ? WHERE id_pesanan = ?");
-                $stmtToken->execute([$snap_token, $id_pesanan]);
-            }
-            
-            // 6. Clear cart
+            // 5. Clear cart
             $stmtClear = $pdo->prepare("DELETE FROM keranjang WHERE id_user = ?");
             $stmtClear->execute([$id_user]);
             
             $pdo->commit();
-            setFlashMessage('success', 'Pesanan berhasil dibuat. Silakan lakukan pembayaran.');
+            setFlashMessage('success', 'Pesanan berhasil dibuat! Silakan selesaikan pembayaran transfer bank.');
             redirect('checkout.php?id_pesanan=' . $id_pesanan);
             
         } catch (\PDOException $e) {
@@ -113,6 +96,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     } else {
         setFlashMessage('danger', 'Keranjang Anda kosong.');
         redirect('produk.php');
+    }
+}
+
+// Action: Pelanggan klik "Saya Sudah Transfer"
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'konfirmasi_transfer') {
+    $id_pesanan_konfirm = (int)$_POST['id_pesanan'];
+    if ($pdo && $id_pesanan_konfirm > 0) {
+        try {
+            // Insert payment record as 'Menunggu' verification
+            $stmtCheckPay = $pdo->prepare("SELECT id_pembayaran FROM pembayaran WHERE id_pesanan = ?");
+            $stmtCheckPay->execute([$id_pesanan_konfirm]);
+            if (!$stmtCheckPay->fetch()) {
+                $stmtPay = $pdo->prepare("INSERT INTO pembayaran (id_pesanan, metode_pembayaran, bukti_pembayaran, tanggal_bayar, status_verifikasi) VALUES (?, 'Transfer Bank', 'Menunggu konfirmasi admin', NOW(), 'Menunggu')");
+                $stmtPay->execute([$id_pesanan_konfirm]);
+            }
+            setFlashMessage('success', 'Konfirmasi transfer berhasil dikirim! Admin akan segera memverifikasi pembayaran Anda.');
+            redirect('pesanan.php');
+        } catch (\PDOException $e) {
+            logError($e);
+            setFlashMessage('danger', 'Terjadi kesalahan. Silakan coba lagi.');
+            redirect('checkout.php?id_pesanan=' . $id_pesanan_konfirm);
+        }
     }
 }
 
@@ -138,67 +143,74 @@ if (!$pendingOrder && $pdo) {
     <?= getFlashMessage(); ?>
     
     <?php if ($pendingOrder): ?>
-        <!-- MIDTRANS PAYMENT SCREEN -->
-        <div class="auth-wrapper" style="max-width: 650px; padding: 40px; border-radius: 24px; text-align: center;">
-            <div class="auth-header">
-                <i class="fa fa-credit-card" style="font-size: 3.5rem; color: var(--primary-color); margin-bottom: 20px;"></i>
-                <h2>Pembayaran Pesanan</h2>
-                <p class="subtitle">Pesanan Anda #<?= $pendingOrder['id_pesanan'] ?> Telah Dibuat</p>
-                <div style="font-size: 1.3rem; margin-top: 20px; background-color: var(--primary-light); color: var(--primary-hover); padding: 15px; border-radius: 12px; font-weight:700;">
+        <!-- PAYMENT SCREEN - Transfer Bank Manual -->
+        <div class="auth-wrapper" style="max-width: 680px; padding: 0; border-radius: 24px; overflow: hidden; text-align: left;">
+            
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, var(--primary-color), var(--primary-hover)); padding: 35px 40px; text-align:center; color:#fff;">
+                <i class="fa fa-building-columns" style="font-size: 2.8rem; margin-bottom: 12px; display:block; opacity:0.9;"></i>
+                <h2 style="color:#fff; font-size:1.6rem; margin:0 0 6px;">Pembayaran via Transfer Bank</h2>
+                <p style="opacity:0.85; margin:0; font-size:0.9rem;">Pesanan #<?= $pendingOrder['id_pesanan'] ?></p>
+            </div>
+            
+            <div style="padding: 35px 40px;">
+                <!-- Total Badge -->
+                <div style="background-color: var(--primary-light); color: var(--primary-hover); padding: 18px 24px; border-radius: 14px; font-size: 1.4rem; font-weight:700; text-align:center; margin-bottom: 30px;">
                     Total Bayar: <?= formatRupiah($pendingOrder['total_harga']) ?>
                 </div>
-            </div>
-
-            <?php if (!empty($pendingOrder['snap_token'])): ?>
-                <p style="color: var(--text-muted); margin: 20px 0; font-size: 0.95rem;">
-                    Silakan klik tombol di bawah ini untuk menyelesaikan pembayaran menggunakan Kartu Kredit, Virtual Account, QRIS, e-Wallet, atau metode lainnya melalui Midtrans.
-                </p>
-                <button id="pay-button" class="btn btn-primary" style="width: 100%; height: 50px; display:flex; align-items:center; justify-content:center; gap: 10px; font-size: 1.05rem; font-weight: 600;">
-                    <i class="fa fa-shield-halved"></i> Bayar Sekarang
-                </button>
-            <?php else: ?>
-                <div class="alert alert-danger" style="margin-top: 20px;">
-                    Gagal memuat sistem pembayaran Midtrans. Silakan coba muat ulang halaman ini atau hubungi bantuan.
+                
+                <!-- Bank Account Info -->
+                <h4 style="font-family:var(--font-body); font-weight:700; margin-bottom:16px; color:var(--text-color); font-size:1rem;"><i class="fa fa-info-circle" style="color:var(--primary-color);"></i> Transfer ke Rekening Berikut:</h4>
+                
+                <div style="border: 1px solid var(--border-color); border-radius: 14px; overflow:hidden; margin-bottom: 25px;">
+                    <!-- Bank 1 -->
+                    <div style="padding: 18px 22px; display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-color);">
+                        <div>
+                            <div style="font-weight:700; color:var(--text-color); font-size:0.95rem;">🏦 BCA</div>
+                            <div style="font-size:1.05rem; font-weight:800; letter-spacing:1px; color:var(--primary-hover); margin-top:2px;">1234567890</div>
+                            <div style="font-size:0.82rem; color:var(--text-muted);">a.n. Toko Aromatherapy</div>
+                        </div>
+                        <button onclick="navigator.clipboard.writeText('1234567890'); this.innerHTML='✅ Disalin!'" style="background:var(--primary-light); border:none; color:var(--primary-hover); padding:6px 14px; border-radius:8px; font-size:0.8rem; cursor:pointer; font-weight:600;">Salin</button>
+                    </div>
+                    <!-- Bank 2 -->
+                    <div style="padding: 18px 22px; display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-color);">
+                        <div>
+                            <div style="font-weight:700; color:var(--text-color); font-size:0.95rem;">🏦 Mandiri</div>
+                            <div style="font-size:1.05rem; font-weight:800; letter-spacing:1px; color:var(--primary-hover); margin-top:2px;">0987654321</div>
+                            <div style="font-size:0.82rem; color:var(--text-muted);">a.n. Toko Aromatherapy</div>
+                        </div>
+                        <button onclick="navigator.clipboard.writeText('0987654321'); this.innerHTML='✅ Disalin!'" style="background:var(--primary-light); border:none; color:var(--primary-hover); padding:6px 14px; border-radius:8px; font-size:0.8rem; cursor:pointer; font-weight:600;">Salin</button>
+                    </div>
+                    <!-- Bank 3 -->
+                    <div style="padding: 18px 22px; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <div style="font-weight:700; color:var(--text-color); font-size:0.95rem;">🏦 BNI</div>
+                            <div style="font-size:1.05rem; font-weight:800; letter-spacing:1px; color:var(--primary-hover); margin-top:2px;">1122334455</div>
+                            <div style="font-size:0.82rem; color:var(--text-muted);">a.n. Toko Aromatherapy</div>
+                        </div>
+                        <button onclick="navigator.clipboard.writeText('1122334455'); this.innerHTML='✅ Disalin!'" style="background:var(--primary-light); border:none; color:var(--primary-hover); padding:6px 14px; border-radius:8px; font-size:0.8rem; cursor:pointer; font-weight:600;">Salin</button>
+                    </div>
                 </div>
-            <?php endif; ?>
-            
-            <div style="margin-top: 25px; font-size: 0.85rem; color: var(--text-muted);">
-                <i class="fa fa-lock"></i> Pembayaran Anda dienkripsi secara aman dan diproses otomatis.
+
+                <!-- Instructions -->
+                <div style="background-color: #FFF8E1; border-left: 4px solid #F9A825; padding: 15px 18px; border-radius: 8px; margin-bottom: 25px; font-size:0.875rem; color: #5a4000;">
+                    <strong>⚠️ Penting:</strong> Sertakan 3 digit terakhir nomor pesanan <strong>#<?= $pendingOrder['id_pesanan'] ?></strong> sebagai berita transfer agar pembayaran mudah diidentifikasi.
+                </div>
+
+                <!-- Confirm Button -->
+                <form action="checkout.php" method="POST">
+                    <input type="hidden" name="action" value="konfirmasi_transfer">
+                    <input type="hidden" name="id_pesanan" value="<?= $pendingOrder['id_pesanan'] ?>">
+                    <button type="submit" class="btn btn-primary" style="width:100%; height:52px; font-size:1.05rem; font-weight:700; display:flex; align-items:center; justify-content:center; gap:10px;" onclick="return confirm('Konfirmasi bahwa Anda telah melakukan transfer bank sesuai jumlah yang tertera?')">
+                        <i class="fa fa-circle-check"></i> Saya Sudah Transfer
+                    </button>
+                </form>
+                
+                <p style="text-align:center; font-size:0.8rem; color:var(--text-muted); margin-top: 15px;">
+                    <i class="fa fa-clock"></i> Admin akan memverifikasi pembayaran Anda dalam 1×24 jam.
+                </p>
             </div>
         </div>
-
-        <?php if (!empty($pendingOrder['snap_token'])): ?>
-            <?php
-            // Load configuration to get Client Key
-            $midtransConfigPath = __DIR__ . '/../config/midtrans.php';
-            if (file_exists($midtransConfigPath)) {
-                require_once $midtransConfigPath;
-            }
-            $isProd = defined('MIDTRANS_IS_PRODUCTION') ? MIDTRANS_IS_PRODUCTION : false;
-            $snapJsUrl = $isProd ? 'https://app.midtrans.com/snap/snap.js' : 'https://app.sandbox.midtrans.com/snap/snap.js';
-            $clientKey = defined('MIDTRANS_CLIENT_KEY') ? MIDTRANS_CLIENT_KEY : '';
-            ?>
-            <script type="text/javascript" src="<?= $snapJsUrl ?>" data-client-key="<?= $clientKey ?>"></script>
-            <script type="text/javascript">
-                const payButton = document.getElementById('pay-button');
-                payButton.addEventListener('click', function () {
-                    snap.pay('<?= $pendingOrder['snap_token'] ?>', {
-                        onSuccess: function(result) {
-                            window.location.href = 'pesanan-berhasil.php?id_pesanan=<?= $pendingOrder['id_pesanan'] ?>';
-                        },
-                        onPending: function(result) {
-                            window.location.href = 'pesanan.php';
-                        },
-                        onError: function(result) {
-                            alert("Pembayaran gagal! Silakan coba lagi.");
-                        },
-                        onClose: function() {
-                            // User closed the popup without finishing the payment
-                        }
-                    });
-                });
-            </script>
-        <?php endif; ?>
         
     <?php else: ?>
         <!-- PLACE ORDER SCREEN -->

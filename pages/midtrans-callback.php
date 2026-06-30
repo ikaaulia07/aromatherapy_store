@@ -68,11 +68,11 @@ try {
             $payExists = $stmtCheckPay->fetch();
 
             if ($payExists) {
-                $stmtUpdatePay = $pdo->prepare("UPDATE pembayaran SET metode_pembayaran = ?, bukti_pembayaran = ?, tanggal_bayar = NOW(), status_verifikasi = 'Diterima' WHERE id_pesanan = ?");
-                $stmtUpdatePay->execute([$payment_type, $transaction_id, $order_id]);
+                $stmtUpdatePay = $pdo->prepare("UPDATE pembayaran SET metode_pembayaran = 'midtrans_json', bukti_pembayaran = ?, tanggal_bayar = NOW(), status_verifikasi = 'Diterima' WHERE id_pesanan = ?");
+                $stmtUpdatePay->execute([$jsonStr, $order_id]);
             } else {
-                $stmtInsertPay = $pdo->prepare("INSERT INTO pembayaran (id_pesanan, metode_pembayaran, bukti_pembayaran, tanggal_bayar, status_verifikasi) VALUES (?, ?, ?, NOW(), 'Diterima')");
-                $stmtInsertPay->execute([$order_id, $payment_type, $transaction_id]);
+                $stmtInsertPay = $pdo->prepare("INSERT INTO pembayaran (id_pesanan, metode_pembayaran, bukti_pembayaran, tanggal_bayar, status_verifikasi) VALUES (?, 'midtrans_json', ?, NOW(), 'Diterima')");
+                $stmtInsertPay->execute([$order_id, $jsonStr]);
             }
         } 
         elseif ($transaction_status === 'deny' || $transaction_status === 'expire' || $transaction_status === 'cancel') {
@@ -98,11 +98,11 @@ try {
                 $payExists = $stmtCheckPay->fetch();
 
                 if ($payExists) {
-                    $stmtUpdatePay = $pdo->prepare("UPDATE pembayaran SET status_verifikasi = 'Ditolak' WHERE id_pesanan = ?");
-                    $stmtUpdatePay->execute([$order_id]);
+                    $stmtUpdatePay = $pdo->prepare("UPDATE pembayaran SET metode_pembayaran = 'midtrans_json', bukti_pembayaran = ?, tanggal_bayar = NOW(), status_verifikasi = 'Ditolak' WHERE id_pesanan = ?");
+                    $stmtUpdatePay->execute([$jsonStr, $order_id]);
                 } else {
-                    $stmtInsertPay = $pdo->prepare("INSERT INTO pembayaran (id_pesanan, metode_pembayaran, bukti_pembayaran, tanggal_bayar, status_verifikasi) VALUES (?, ?, ?, NOW(), 'Ditolak')");
-                    $stmtInsertPay->execute([$order_id, $payment_type, $transaction_id]);
+                    $stmtInsertPay = $pdo->prepare("INSERT INTO pembayaran (id_pesanan, metode_pembayaran, bukti_pembayaran, tanggal_bayar, status_verifikasi) VALUES (?, 'midtrans_json', ?, NOW(), 'Ditolak')");
+                    $stmtInsertPay->execute([$order_id, $jsonStr]);
                 }
             }
         }
