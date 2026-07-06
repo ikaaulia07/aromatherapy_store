@@ -1,0 +1,8 @@
+# Konfigurasi rahasia
+config/midtrans-secret.php
+
+# Log error
+error.log
+
+# Mac OS
+.DS_Store
