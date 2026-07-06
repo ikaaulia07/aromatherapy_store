@@ -204,20 +204,22 @@ if ($pdo) {
                                 <small style="display: block; color: var(--text-muted);">
                                     Status: 
                                     <strong style="color: <?= $payment['status_verifikasi'] === 'Diterima' ? 'var(--text-green, #2e7d32)' : ($payment['status_verifikasi'] === 'Ditolak' ? '#d32f2f' : '#f57f17') ?>;">
-                                        <?= $payment['status_verifikasi'] === 'Diterima' ? '✅ Lunas' : ($payment['status_verifikasi'] === 'Ditolak' ? '❌ Ditolak' : '⏳ Menunggu Verifikasi Admin') ?>
+                                        <?= $payment['status_verifikasi'] === 'Diterima' ? '✅ Lunas' : ($payment['status_verifikasi'] === 'Ditolak' ? '❌ Ditolak' : '⏳ Menunggu') ?>
                                     </strong>
                                 </small>
                             <?php endif; ?>
                         </div>
                         <div>
-                            <?php if ($order['status'] === 'Pending' && !$payment): ?>
-                                <a href="checkout.php?id_pesanan=<?= $order['id_pesanan'] ?>" class="btn btn-primary" style="padding: 8px 20px; font-size: 0.85rem;">
-                                    <i class="fa fa-building-columns"></i> Bayar &amp; Konfirmasi Transfer
-                                </a>
-                            <?php elseif ($order['status'] === 'Pending' && $payment && $payment['status_verifikasi'] === 'Menunggu'): ?>
-                                <span style="font-size: 0.82rem; color: #f57f17; font-weight:600;">
-                                    <i class="fa fa-clock"></i> Menunggu Verifikasi Admin
-                                </span>
+                            <?php if ($order['status'] === 'Pending'): ?>
+                                <div style="display:flex; flex-direction:column; gap:8px;">
+                                    <a href="checkout.php?id_pesanan=<?= $order['id_pesanan'] ?>" class="btn btn-primary" style="padding: 8px 20px; font-size: 0.85rem;">
+                                        <i class="fa fa-shield-halved"></i> Bayar Sekarang
+                                    </a>
+                                    <!-- DEV SIMULATOR BUTTON (Localhost Only) -->
+                                    <a href="../tes-bayar.php?id_pesanan=<?= $order['id_pesanan'] ?>" onclick="return confirm('Gunakan ini HANYA saat testing di localhost untuk melewati verifikasi Midtrans. Lanjutkan?')" class="btn btn-outline" style="padding: 6px 15px; font-size: 0.75rem; border-color:#FF9800; color:#FF9800;">
+                                        <i class="fa fa-bolt"></i> Simulasikan Lunas (Lokal)
+                                    </a>
+                                </div>
                             <?php elseif ($order['status'] === 'Dikirim'): ?>
                                 <form action="pesanan.php" method="POST" onsubmit="return confirm('Apakah Anda yakin barang sudah diterima dengan baik?');">
                                     <input type="hidden" name="action" value="konfirmasi_selesai">

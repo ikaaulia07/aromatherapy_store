@@ -2,10 +2,10 @@
 // Midtrans Configuration
 
 // Set your Merchant Server Key
-define('MIDTRANS_SERVER_KEY', 'SB-Mid-server-PLACEHOLDER'); // Ganti dengan Server Key Anda
+define('MIDTRANS_SERVER_KEY', 'Mid-server-tt4bqmQJKiVdC7r2lPQ21R8J');
 
 // Set your Merchant Client Key
-define('MIDTRANS_CLIENT_KEY', 'SB-Mid-client-PLACEHOLDER'); // Ganti dengan Client Key Anda
+define('MIDTRANS_CLIENT_KEY', 'Mid-client-zFuaRu4W_Hlha1TY');
 
 // true untuk Production, false untuk Sandbox (Testing)
 define('MIDTRANS_IS_PRODUCTION', false); 
