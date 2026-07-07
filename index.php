@@ -58,26 +58,18 @@ if ($pdo) {
             <!-- Cat 2 -->
             <a href="<?= $appUrl ?>/pages/produk.php?kategori=2" style="background: var(--secondary-color); border-radius: 20px; padding: 40px 20px; text-align: center; display: block; border: 1px solid var(--border-color); box-shadow: var(--card-shadow);">
                 <div style="width: 70px; height: 70px; border-radius: 50%; background-color: #fff; color: var(--primary-color); display: inline-flex; align-items: center; justify-content: center; font-size: 1.8rem; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(226,149,149,0.1);">
-                    <i class="fa fa-wind"></i>
-                </div>
-                <h3 style="font-family: var(--font-heading); font-size: 1.4rem; color: var(--text-color); margin-bottom: 10px;">Diffuser</h3>
-                <p style="color: var(--text-muted); font-size: 0.9rem;">Penyebar keharuman secara merata di ruangan.</p>
-            </a>
-            <!-- Cat 3 -->
-            <a href="<?= $appUrl ?>/pages/produk.php?kategori=3" style="background: var(--secondary-color); border-radius: 20px; padding: 40px 20px; text-align: center; display: block; border: 1px solid var(--border-color); box-shadow: var(--card-shadow);">
-                <div style="width: 70px; height: 70px; border-radius: 50%; background-color: #fff; color: var(--primary-color); display: inline-flex; align-items: center; justify-content: center; font-size: 1.8rem; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(226,149,149,0.1);">
-                    <i class="fa fa-fire"></i>
-                </div>
-                <h3 style="font-family: var(--font-heading); font-size: 1.4rem; color: var(--text-color); margin-bottom: 10px;">Aromatherapy Candle</h3>
-                <p style="color: var(--text-muted); font-size: 0.9rem;">Lilin aroma terapi penenang jiwa alami.</p>
-            </a>
-            <!-- Cat 4 -->
-            <a href="<?= $appUrl ?>/pages/produk.php?kategori=4" style="background: var(--secondary-color); border-radius: 20px; padding: 40px 20px; text-align: center; display: block; border: 1px solid var(--border-color); box-shadow: var(--card-shadow);">
-                <div style="width: 70px; height: 70px; border-radius: 50%; background-color: #fff; color: var(--primary-color); display: inline-flex; align-items: center; justify-content: center; font-size: 1.8rem; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(226,149,149,0.1);">
                     <i class="fa fa-compress"></i>
                 </div>
                 <h3 style="font-family: var(--font-heading); font-size: 1.4rem; color: var(--text-color); margin-bottom: 10px;">Reed Diffuser</h3>
                 <p style="color: var(--text-muted); font-size: 0.9rem;">Wewangian ruangan dengan media stick rotan.</p>
+            </a>
+            <!-- Cat 3 -->
+            <a href="<?= $appUrl ?>/pages/produk.php?kategori=4" style="background: var(--secondary-color); border-radius: 20px; padding: 40px 20px; text-align: center; display: block; border: 1px solid var(--border-color); box-shadow: var(--card-shadow);">
+                <div style="width: 70px; height: 70px; border-radius: 50%; background-color: #fff; color: var(--primary-color); display: inline-flex; align-items: center; justify-content: center; font-size: 1.8rem; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(226,149,149,0.1);">
+                    <i class="fa fa-fire"></i>
+                </div>
+                <h3 style="font-family: var(--font-heading); font-size: 1.4rem; color: var(--text-color); margin-bottom: 10px;">Aromatherapy Candles</h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Lilin aroma terapi penenang jiwa alami.</p>
             </a>
         </div>
     </div>
