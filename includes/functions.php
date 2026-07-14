@@ -121,7 +121,7 @@ function getMidtransSnapToken($orderId, $grossAmount, $customerDetails) {
 
     $payload = [
         'transaction_details' => [
-            'order_id'     => $orderId,
+            'order_id'     => $orderId . '-' . time(),
             'gross_amount' => (int)$grossAmount,
         ],
         'customer_details' => [

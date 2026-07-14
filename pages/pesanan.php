@@ -211,15 +211,9 @@ if ($pdo) {
                         </div>
                         <div>
                             <?php if ($order['status'] === 'Pending'): ?>
-                                <div style="display:flex; flex-direction:column; gap:8px;">
-                                    <a href="checkout.php?id_pesanan=<?= $order['id_pesanan'] ?>" class="btn btn-primary" style="padding: 8px 20px; font-size: 0.85rem;">
-                                        <i class="fa fa-shield-halved"></i> Bayar Sekarang
-                                    </a>
-                                    <!-- DEV SIMULATOR BUTTON (Localhost Only) -->
-                                    <a href="../tes-bayar.php?id_pesanan=<?= $order['id_pesanan'] ?>" onclick="return confirm('Gunakan ini HANYA saat testing di localhost untuk melewati verifikasi Midtrans. Lanjutkan?')" class="btn btn-outline" style="padding: 6px 15px; font-size: 0.75rem; border-color:#FF9800; color:#FF9800;">
-                                        <i class="fa fa-bolt"></i> Simulasikan Lunas (Lokal)
-                                    </a>
-                                </div>
+                                <a href="checkout.php?id_pesanan=<?= $order['id_pesanan'] ?>" class="btn btn-primary" style="padding: 8px 20px; font-size: 0.85rem;">
+                                    <i class="fa fa-shield-halved"></i> Bayar Sekarang
+                                </a>
                             <?php elseif ($order['status'] === 'Dikirim'): ?>
                                 <form action="pesanan.php" method="POST" onsubmit="return confirm('Apakah Anda yakin barang sudah diterima dengan baik?');">
                                     <input type="hidden" name="action" value="konfirmasi_selesai">

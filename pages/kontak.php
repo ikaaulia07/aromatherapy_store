@@ -21,7 +21,7 @@ require_once __DIR__ . '/../includes/navbar.php';
                     <i class="fa fa-map-marker-alt"></i>
                 </div>
                 <div>
-                    <h4 style="font-family: var(--font-body); font-weight: 600; font-size: 0.95rem; color: var(--text-color); margin-bottom: 5px;">Alamat Butik</h4>
+                    <h4 style="font-family: var(--font-body); font-weight: 600; font-size: 0.95rem; color: var(--text-color); margin-bottom: 5px;">Alamat Toko</h4>
                     <p style="color: var(--text-muted); font-size: 0.9rem;">Mataram Kekalik Jaya</p>
                 </div>
             </div>
@@ -48,7 +48,7 @@ require_once __DIR__ . '/../includes/navbar.php';
             
             <hr style="border:0; border-top:1px solid var(--border-color); margin: 30px 0;">
             
-            <h4 style="font-family: var(--font-body); font-weight: 600; font-size: 0.95rem; color: var(--text-color); margin-bottom: 15px;">Jam Operasional Butik</h4>
+            <h4 style="font-family: var(--font-body); font-weight: 600; font-size: 0.95rem; color: var(--text-color); margin-bottom: 15px;">Jam Operasional Toko</h4>
             <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 8px;"><strong>Senin - Jumat:</strong> 09.00 - 18.00 WIB</p>
             <p style="color: var(--text-muted); font-size: 0.9rem;"><strong>Sabtu - Minggu:</strong> 10.00 - 15.00 WIB</p>
         </div>

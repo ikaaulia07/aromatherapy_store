@@ -26,11 +26,7 @@ if ($pdo) {
             $stmt->execute([$id_user, $id_p]);
             $pendingOrder = $stmt->fetch();
         }
-        if (!$pendingOrder) {
-            $stmt = $pdo->prepare("SELECT * FROM pesanan WHERE id_user = ? AND status = 'Pending' ORDER BY id_pesanan DESC LIMIT 1");
-            $stmt->execute([$id_user]);
-            $pendingOrder = $stmt->fetch();
-        }
+        // No auto-fallback. Only load pending order if explicitly requested via id_pesanan in URL.
 
         // If pending order exists, try to get/generate snap_token
         if ($pendingOrder && empty($pendingOrder['snap_token'])) {
