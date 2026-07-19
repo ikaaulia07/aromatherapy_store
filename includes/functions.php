@@ -111,6 +111,7 @@ function logError($exception) {
 }
 
 // Get Midtrans Snap Token
+// Returns array ['token' => '...', 'snap_order_id' => '...'] or null on failure
 function getMidtransSnapToken($orderId, $grossAmount, $customerDetails) {
     $configPath = __DIR__ . '/../config/midtrans.php';
     if (file_exists($configPath)) {
@@ -119,9 +120,11 @@ function getMidtransSnapToken($orderId, $grossAmount, $customerDetails) {
         return null;
     }
 
+    $snapOrderId = $orderId . '-' . time();
+
     $payload = [
         'transaction_details' => [
-            'order_id'     => $orderId . '-' . time(),
+            'order_id'     => $snapOrderId,
             'gross_amount' => (int)$grossAmount,
         ],
         'customer_details' => [
@@ -152,7 +155,7 @@ function getMidtransSnapToken($orderId, $grossAmount, $customerDetails) {
 
         $resDecoded = json_decode($response, true);
         if (isset($resDecoded['token'])) {
-            return $resDecoded['token'];
+            return ['token' => $resDecoded['token'], 'snap_order_id' => $snapOrderId];
         } else {
             // Log Midtrans API Error
             if (isset($resDecoded['error_messages'])) {

@@ -226,8 +226,13 @@ if ($pdo) {
                     <?php else: ?>
                         <div style="background-color:#f5f5f5; padding:20px; border-radius:10px; text-align:center; color:var(--text-muted);">
                             <i class="fa fa-clock" style="font-size:1.8rem; display:block; margin-bottom:8px;"></i>
-                            <p style="margin:0; font-size:0.95rem;">Pelanggan belum menyelesaikan pembayaran di Midtrans.</p>
+                            <p style="margin:0 0 16px; font-size:0.95rem;">Belum ada konfirmasi pembayaran dari Midtrans.</p>
+                            <button id="btn-sinkron-midtrans" onclick="sinkronMidtrans(<?= $id_pesanan ?>)" 
+                                style="background: linear-gradient(135deg, #1a73e8, #0d47a1); color:#fff; border:none; padding:10px 22px; border-radius:10px; font-size:0.9rem; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px;">
+                                <i class="fa fa-rotate"></i> Sinkron Status dari Midtrans
+                            </button>
                         </div>
+                        <div id="sinkron-result" style="display:none; margin-top:14px; padding:14px 18px; border-radius:10px; font-size:0.9rem;"></div>
                     <?php endif; ?>
 
                     <hr style="border:0; border-top:1px solid var(--border-color); margin: 25px 0;">
@@ -301,4 +306,44 @@ if ($pdo) {
 
     </div>
 </body>
+
+<script>
+function sinkronMidtrans(idPesanan) {
+    const btn = document.getElementById('btn-sinkron-midtrans');
+    const resultDiv = document.getElementById('sinkron-result');
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Mengecek ke Midtrans...';
+    resultDiv.style.display = 'none';
+
+    fetch('cek-status-midtrans.php?id_pesanan=' + idPesanan)
+        .then(res => res.json())
+        .then(data => {
+            resultDiv.style.display = 'block';
+            if (data.success) {
+                resultDiv.style.background = '#E8F5E9';
+                resultDiv.style.borderLeft = '4px solid #2E7D32';
+                resultDiv.style.color = '#1B5E20';
+                resultDiv.innerHTML = '<strong>' + data.message + '</strong>';
+                // Reload page after 2 seconds to show updated info
+                setTimeout(() => window.location.reload(), 2000);
+            } else {
+                resultDiv.style.background = '#FFF3E0';
+                resultDiv.style.borderLeft = '4px solid #E65100';
+                resultDiv.style.color = '#BF360C';
+                resultDiv.innerHTML = data.message;
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa fa-rotate"></i> Sinkron Status dari Midtrans';
+            }
+        })
+        .catch(err => {
+            resultDiv.style.display = 'block';
+            resultDiv.style.background = '#FFEBEE';
+            resultDiv.style.color = '#B71C1C';
+            resultDiv.innerHTML = 'Gagal menghubungi server. Cek koneksi.';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa fa-rotate"></i> Sinkron Status dari Midtrans';
+        });
+}
+</script>
 </html>

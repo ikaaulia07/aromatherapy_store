@@ -30,11 +30,12 @@ if ($pdo) {
 
         // If pending order exists, try to get/generate snap_token
         if ($pendingOrder && empty($pendingOrder['snap_token'])) {
-            $snap_token = getMidtransSnapToken($pendingOrder['id_pesanan'], $pendingOrder['total_harga'], $user_info);
-            if ($snap_token) {
-                $stmt = $pdo->prepare("UPDATE pesanan SET snap_token = ? WHERE id_pesanan = ?");
-                $stmt->execute([$snap_token, $pendingOrder['id_pesanan']]);
-                $pendingOrder['snap_token'] = $snap_token;
+            $snapResult = getMidtransSnapToken($pendingOrder['id_pesanan'], $pendingOrder['total_harga'], $user_info);
+            if ($snapResult && isset($snapResult['token'])) {
+                $stmt = $pdo->prepare("UPDATE pesanan SET snap_token = ?, snap_order_id = ? WHERE id_pesanan = ?");
+                $stmt->execute([$snapResult['token'], $snapResult['snap_order_id'], $pendingOrder['id_pesanan']]);
+                $pendingOrder['snap_token'] = $snapResult['token'];
+                $pendingOrder['snap_order_id'] = $snapResult['snap_order_id'];
             }
         }
     } catch (\PDOException $e) {
@@ -84,10 +85,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             }
             
             // 5. Generate Midtrans Snap Token
-            $snap_token = getMidtransSnapToken($id_pesanan, $totalHarga, $user_info);
-            if ($snap_token) {
-                $stmtToken = $pdo->prepare("UPDATE pesanan SET snap_token = ? WHERE id_pesanan = ?");
-                $stmtToken->execute([$snap_token, $id_pesanan]);
+            $snapResult = getMidtransSnapToken($id_pesanan, $totalHarga, $user_info);
+            if ($snapResult && isset($snapResult['token'])) {
+                $stmtToken = $pdo->prepare("UPDATE pesanan SET snap_token = ?, snap_order_id = ? WHERE id_pesanan = ?");
+                $stmtToken->execute([$snapResult['token'], $snapResult['snap_order_id'], $id_pesanan]);
             }
             
             // 6. Clear cart
